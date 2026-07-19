@@ -26,7 +26,7 @@ const getCourseCoaches = async (req, res, next) => {
       coaches,
       count: coaches.length,
       maxCoaches: 5,
-      minCoaches: 4,
+      minCoaches: 1,
     });
   } catch (error) {
     next(error);
