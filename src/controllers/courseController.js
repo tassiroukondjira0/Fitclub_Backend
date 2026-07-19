@@ -5,36 +5,8 @@ const Booking = require('../models/Booking');
 // réservation "failed" (paiement échoué) libère la place.
 const BOOKED_STATUSES = ['pending', 'completed'];
 
-// Calcul de l'instructeur rotatif pour un créneau donné
-const getRotatingInstructor = (course, targetDay) => {
-  if (!course.coaches || course.coaches.length === 0 || !course.scheduleSlots || course.scheduleSlots.length === 0) {
-    return course.instructor;
-  }
-
-  // Trouver les créneaux pour le jour demandé
-  const daySlots = course.scheduleSlots.filter(slot => slot.day === targetDay);
-  if (daySlots.length === 0) {
-    return course.instructor;
-  }
-
-  // Prendre le premier créneau du jour pour déterminer l'index de rotation
-  const targetSlot = daySlots[0];
-  const slotIndex = course.scheduleSlots.findIndex(slot => 
-    slot.day === targetSlot.day && slot.time === targetSlot.time
-  );
-
-  if (slotIndex === -1) {
-    return course.instructor;
-  }
-
-  // Rotation simple : le coach à l'index (slotIndex % nombre de coaches)
-  const coachIndex = slotIndex % course.coaches.length;
-  const coach = course.coaches[coachIndex];
-  
-  return coach?.name || course.instructor;
-};
-
-// Ajoute availableSpots à un cours en comptant ses réservations actives.
+// Ajoute availableSpots + reconstruit `instructor` (chaîne) à partir du
+// compte coach lié, pour rester compatible avec le type `Course` du frontend.
 const withAvailability = async (course) => {
   const bookedCount = await Booking.countDocuments({
     courseId: course._id,
@@ -42,11 +14,15 @@ const withAvailability = async (course) => {
   });
   const json = course.toJSON();
   json.availableSpots = Math.max(course.capacity - bookedCount, 0);
-  // Utiliser le coach rotatif basé sur le jour courant
-  const today = new Date();
-  const dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-  const currentDay = dayNames[today.getDay()];
-  json.instructor = getRotatingInstructor(course, currentDay);
+
+  if (course.coachId && typeof course.coachId === 'object' && course.coachId.name) {
+    json.instructor = course.coachId.name;
+    json.coachId = course.coachId._id?.toString() ?? course.coachId.id;
+  } else if (course.coachId) {
+    json.instructor = '';
+    json.coachId = course.coachId.toString();
+  }
+
   return json;
 };
 
@@ -55,7 +31,7 @@ const withAvailability = async (course) => {
 // @access  Public
 const getCourses = async (req, res, next) => {
   try {
-    const courses = await Course.find().sort('_id').populate('coaches', 'name email role');
+    const courses = await Course.find().sort('_id').populate('coachId', 'name');
     const withSpots = await Promise.all(courses.map(withAvailability));
     res.json({ courses: withSpots });
   } catch (error) {
@@ -68,7 +44,7 @@ const getCourses = async (req, res, next) => {
 // @access  Public
 const getCourseById = async (req, res, next) => {
   try {
-    const course = await Course.findById(req.params.id);
+    const course = await Course.findById(req.params.id).populate('coachId', 'name');
     if (!course) return res.status(404).json({ message: 'Cours introuvable' });
     res.json({ course: await withAvailability(course) });
   } catch (error) {
@@ -76,4 +52,17 @@ const getCourseById = async (req, res, next) => {
   }
 };
 
-module.exports = { getCourses, getCourseById };
+// @desc    Cours du coach connecté
+// @route   GET /api/courses/mine
+// @access  Privé (coach)
+const getMyCourses = async (req, res, next) => {
+  try {
+    const courses = await Course.find({ coachId: req.user._id }).sort('_id').populate('coachId', 'name');
+    const withSpots = await Promise.all(courses.map(withAvailability));
+    res.json({ courses: withSpots });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getCourses, getCourseById, getMyCourses };

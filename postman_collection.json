@@ -5,11 +5,30 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:4100/api" },
-    { "key": "token", "value": "" },
-    { "key": "courseId", "value": "course_1" },
-    { "key": "bookingId", "value": "" },
-    { "key": "paymentId", "value": "" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4100/api"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "courseId",
+      "value": "course_1"
+    },
+    {
+      "key": "bookingId",
+      "value": ""
+    },
+    {
+      "key": "paymentId",
+      "value": ""
+    },
+    {
+      "key": "coachId",
+      "value": ""
+    }
   ],
   "item": [
     {
@@ -19,7 +38,12 @@
           "name": "Register",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/auth/register",
             "body": {
               "mode": "raw",
@@ -31,7 +55,12 @@
           "name": "Login",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/auth/login",
             "body": {
               "mode": "raw",
@@ -43,7 +72,12 @@
           "name": "Forgot Password",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/auth/forgot-password",
             "body": {
               "mode": "raw",
@@ -55,7 +89,12 @@
           "name": "Get Me",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": "{{baseUrl}}/auth/me"
           }
         },
@@ -64,8 +103,14 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "url": "{{baseUrl}}/auth/me",
             "body": {
@@ -83,7 +128,12 @@
           "name": "Overview",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": "{{baseUrl}}/dashboard/overview"
           }
         },
@@ -91,7 +141,12 @@
           "name": "Clients (admin)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": "{{baseUrl}}/dashboard/clients"
           }
         }
@@ -102,11 +157,17 @@
       "item": [
         {
           "name": "List Courses",
-          "request": { "method": "GET", "url": "{{baseUrl}}/courses" }
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/courses"
+          }
         },
         {
           "name": "Get Course By Id",
-          "request": { "method": "GET", "url": "{{baseUrl}}/courses/{{courseId}}" }
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/courses/{{courseId}}"
+          }
         }
       ]
     },
@@ -117,7 +178,12 @@
           "name": "Send Contact Message",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/contact",
             "body": {
               "mode": "raw",
@@ -135,8 +201,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "url": "{{baseUrl}}/bookings",
             "body": {
@@ -149,7 +221,12 @@
           "name": "My Bookings",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": "{{baseUrl}}/bookings/me"
           }
         }
@@ -163,8 +240,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
             ],
             "url": "{{baseUrl}}/payments/process",
             "body": {
@@ -177,8 +260,78 @@
           "name": "Get Payment Status",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": "{{baseUrl}}/payments/{{paymentId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Coaches",
+      "item": [
+        {
+          "name": "Create Coach (admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/coaches",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Coach Awa\",\n  \"email\": \"awa.coach@fitclub.sn\",\n  \"password\": \"motdepasse123\",\n  \"phone\": \"+221701234567\",\n  \"bio\": \"Specialiste endurance et cardio.\",\n  \"specialty\": \"Endurance & cardio\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Coaches (admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/coaches"
+          }
+        },
+        {
+          "name": "My Courses (coach)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/courses/mine"
+          }
+        },
+        {
+          "name": "Course Bookings (coach/admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/bookings/course/{{courseId}}"
           }
         }
       ]

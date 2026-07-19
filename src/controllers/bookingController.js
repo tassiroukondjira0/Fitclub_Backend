@@ -18,34 +18,10 @@ const createBooking = async (req, res, next) => {
       return res.status(400).json({ message: 'Type d\'abonnement invalide' });
     }
 
-    const course = await Course.findById(courseId).populate('coaches');
+    const course = await Course.findById(courseId);
     if (!course) {
       return res.status(404).json({ message: 'Cours introuvable' });
     }
-
-    if (!course.coaches || course.coaches.length === 0) {
-      return res.status(400).json({ message: 'Aucun coach assigné à ce cours' });
-    }
-
-    // Alternance automatique des coachs :
-    // - Récupérer toutes les réservations existantes pour ce cours, triées par ordre de création
-    // - Compter combien de fois chaque coach a été assigné
-    // - Choisir le coach avec le moins d'assignations (et le plus ancien en cas d'égalité)
-    const previousBookings = await Booking.find({ courseId, paymentStatus: 'completed' })
-      .sort('createdAt')
-      .populate('assignedCoach');
-
-    const coachAssignments = course.coaches.map((coach) => ({
-      coach,
-      count: previousBookings.filter((b) => b.assignedCoach && b.assignedCoach._id.toString() === coach._id.toString()).length,
-    }));
-
-    coachAssignments.sort((a, b) => {
-      if (a.count !== b.count) return a.count - b.count;
-      return a.coach._id.toString().localeCompare(b.coach._id.toString());
-    });
-
-    const selectedCoach = coachAssignments[0].coach;
 
     // Le montant est toujours calculé côté serveur à partir de la grille
     // tarifaire officielle : on ne fait jamais confiance à un montant envoyé par le client.
@@ -55,12 +31,9 @@ const createBooking = async (req, res, next) => {
       subscriptionType,
       amount: PRICING[subscriptionType],
       paymentStatus: 'pending',
-      assignedCoach: selectedCoach._id,
     });
 
-    const populatedBooking = await Booking.findById(booking._id).populate('assignedCoach', 'name email role');
-
-    res.status(201).json({ booking: populatedBooking });
+    res.status(201).json({ booking });
   } catch (error) {
     next(error);
   }
@@ -78,4 +51,27 @@ const getMyBookings = async (req, res, next) => {
   }
 };
 
-module.exports = { createBooking, getMyBookings };
+// @desc    Liste des inscrits à un cours (élèves d'un coach)
+// @route   GET /api/bookings/course/:courseId
+// @access  Privé (coach propriétaire du cours, ou admin)
+const getCourseBookings = async (req, res, next) => {
+  try {
+    const course = await Course.findById(req.params.courseId);
+    if (!course) return res.status(404).json({ message: 'Cours introuvable' });
+
+    const isOwner = course.coachId.toString() === req.user._id.toString();
+    if (!isOwner && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    const bookings = await Booking.find({ courseId: req.params.courseId })
+      .populate('userId', 'name email phone')
+      .sort('-createdAt');
+
+    res.json({ bookings });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { createBooking, getMyBookings, getCourseBookings };

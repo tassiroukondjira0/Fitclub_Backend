@@ -21,7 +21,8 @@ const userSchema = new mongoose.Schema(
       minlength: 6,
       select: false,
     },
-    // Le frontend ne connaît que deux rôles : "admin" et "client"
+    // Le frontend ne connaissait jusqu'ici que "admin" et "client" ;
+    // "coach" est un vrai rôle qui peut se connecter comme les autres.
     role: {
       type: String,
       enum: ['admin', 'client', 'coach'],
@@ -32,6 +33,9 @@ const userSchema = new mongoose.Schema(
     address: { type: String, default: '' },
     city: { type: String, default: '' },
     country: { type: String, default: '' },
+    // Champs utilisés uniquement pour les comptes coach (facultatifs sinon)
+    bio: { type: String, default: '' },
+    specialty: { type: String, default: '' },
   },
   {
     timestamps: true,

@@ -14,11 +14,6 @@ const bookingSchema = new mongoose.Schema(
       ref: 'Course',
       required: true,
     },
-    assignedCoach: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      default: null,
-    },
     subscriptionType: {
       type: String,
       enum: ['session', 'monthly', 'annual'],

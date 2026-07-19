@@ -4,29 +4,37 @@ const morgan = require('morgan');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 const trackAnalytics = require('./middleware/analyticsMiddleware');
 
-const parseAllowedOrigins = (envValue) => {
-  if (!envValue) return '*';
-  const origins = envValue.split(',').map((origin) => origin.trim()).filter(Boolean);
-  if (origins.length === 1) return origins[0];
-  return origins;
-};
-
-const allowedOrigins = parseAllowedOrigins(process.env.CLIENT_URL);
-
 const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const courseRoutes = require('./routes/courseRoutes');
-const courseCoachRoutes = require('./routes/courseCoachRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
-const notificationRoutes = require('./routes/notificationRoutes');
+const coachRoutes = require('./routes/coachRoutes');
 
 const app = express();
 
+// CLIENT_URL peut contenir un ou plusieurs domaines séparés par des virgules
+// (ex : votre domaine de prod Vercel + des URLs de preview). La comparaison
+// ignore volontairement un "/" final, car les navigateurs n'en envoient
+// jamais dans l'en-tête Origin — une erreur de copier-coller fréquente sinon.
+const allowedOrigins = (process.env.CLIENT_URL || '')
+  .split(',')
+  .map((o) => o.trim().replace(/\/$/, ''))
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      // Pas d'origine (ex : Postman, curl, requêtes serveur-à-serveur) : autorisé
+      if (!origin) return callback(null, true);
+      const normalized = origin.replace(/\/$/, '');
+      if (allowedOrigins.length === 0 || allowedOrigins.includes(normalized)) {
+        return callback(null, true);
+      }
+      console.warn(`[CORS] Origine refusée : ${origin}`);
+      return callback(new Error('Non autorisé par CORS'));
+    },
     credentials: true,
   })
 );
@@ -46,11 +54,10 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/courses', courseRoutes);
-app.use('/api/courses', courseCoachRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/payments', paymentRoutes);
-app.use('/api/notifications', notificationRoutes);
+app.use('/api/coaches', coachRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

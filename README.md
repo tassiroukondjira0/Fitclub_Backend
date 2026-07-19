@@ -74,14 +74,15 @@ JWT envoyé dans l'en-tête de chaque route privée :
 Authorization: Bearer <token>
 ```
 
-Deux rôles existent : `client` (par défaut à l'inscription) et `admin`.
+Trois rôles existent : `client` (par défaut à l'inscription), `admin`, et `coach`.
 
-## Créer un compte administrateur
+## Créer un compte administrateur ou coach
 
-Par sécurité, **aucune route ne permet de créer un administrateur** — l'inscription publique
-crée toujours un compte `client`. Pour promouvoir un compte en admin après son inscription
-normale, connectez-vous à votre base MongoDB (Atlas → "Browse Collections", ou `mongosh`) et
-mettez à jour le document manuellement :
+Par sécurité, **l'inscription publique (`/api/auth/register`) crée toujours un compte `client`.**
+Ni un admin ni un coach ne peuvent être créés par ce biais.
+
+**Administrateur** — après une inscription normale, promouvez le compte manuellement dans MongoDB
+(Atlas → "Browse Collections", ou `mongosh`) :
 
 ```js
 db.users.updateOne(
@@ -90,8 +91,12 @@ db.users.updateOne(
 )
 ```
 
+**Coach** — un compte coach est créé par un admin via `POST /api/coaches` (voir plus bas), avec un
+mot de passe que le coach pourra changer ensuite. Le script `npm run seed` crée aussi 6 comptes
+coach de démonstration (mot de passe `Coach123!`), un par cours.
+
 Le frontend détecte le rôle admin via le champ `role` renvoyé par l'API (voir `userIsAdmin` dans
-`src/lib/auth.ts`), donc ce changement suffit — pas besoin de modifier le frontend.
+`src/lib/auth.ts`) — pas besoin de modifier le frontend pour ces changements de rôle.
 
 ---
 
@@ -188,6 +193,44 @@ Réponse `GET /api/courses` :
 
 ---
 
+---
+
+### Coaches
+
+| Méthode | Route | Accès | Description |
+|---|---|---|---|
+| POST | `/api/coaches` | 🔒 admin | Créer un compte coach |
+| GET | `/api/coaches` | 🔒 admin | Liste des coachs |
+| GET | `/api/coaches/:id` | 🔒 admin, ou le coach lui-même | Détail d'un coach |
+| PATCH | `/api/coaches/:id` | 🔒 admin, ou le coach lui-même | Modifier bio/téléphone/spécialité |
+| DELETE | `/api/coaches/:id` | 🔒 admin | Supprimer un compte coach |
+
+Un coach se connecte ensuite comme n'importe quel utilisateur via `POST /api/auth/login` — l'API
+renvoie `role: "coach"` dans la réponse.
+
+**`POST /api/coaches`** — Body :
+```json
+{
+  "name": "Coach Awa",
+  "email": "awa.coach@fitclub.sn",
+  "password": "motdepasse123",
+  "phone": "+221701234567",
+  "bio": "Spécialiste endurance et cardio depuis 8 ans.",
+  "specialty": "Endurance & cardio"
+}
+```
+
+Chaque cours (`Course`) est désormais lié à un vrai compte coach via `coachId` (au lieu d'une
+simple chaîne `instructor`). Le champ `instructor` renvoyé au frontend est reconstruit
+dynamiquement à partir du nom du coach lié, donc la forme de réponse `GET /api/courses` ne change
+pas côté frontend.
+
+Un coach peut consulter ses propres cours via `GET /api/courses/mine`, et voir les clients
+inscrits à l'un de ses cours via `GET /api/bookings/course/:courseId` (documenté dans la section
+Bookings ci-dessous).
+
+---
+
 ### Contact
 
 | Méthode | Route | Accès | Description |
@@ -204,6 +247,7 @@ Body : `{ "firstName", "lastName", "email", "message" }` → `{ "message": "..."
 |---|---|---|---|
 | POST | `/api/bookings` | 🔒 | Créer une réservation |
 | GET | `/api/bookings/me` | 🔒 | Mes réservations |
+| GET | `/api/bookings/course/:courseId` | 🔒 coach (propriétaire du cours), admin | Clients inscrits à ce cours |
 
 **`POST /api/bookings`** — Body : `{ "courseId": "course_1", "subscriptionType": "monthly" }`
 
@@ -287,6 +331,3 @@ puis de redéployer le frontend.
 
 Créer un cluster gratuit sur [MongoDB Atlas](https://www.mongodb.com/atlas), whitelister
 `0.0.0.0/0` pour l'accès depuis Render/Railway, puis copier l'URI dans `MONGO_URI`.
-#   F i n a l _ P r o j e t _ f r o n t - e n d  
- #   F i n a l _ P r o j e t _ f r o n t - e n d  
- 

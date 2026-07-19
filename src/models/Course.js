@@ -19,8 +19,13 @@ const courseSchema = new mongoose.Schema(
       required: true,
       default: 45,
     },
-    instructor: {
-      type: String,
+    // Référence vers un vrai compte utilisateur (role: "coach"), et non plus
+    // une simple chaîne de texte. Le champ `instructor` (attendu par le
+    // frontend comme une chaîne) est reconstruit dynamiquement à partir de ce
+    // compte dans courseController.js, pour ne rien casser côté frontend.
+    coachId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
       required: true,
     },
     schedule: {
@@ -32,30 +37,10 @@ const courseSchema = new mongoose.Schema(
       required: true,
       default: 12,
     },
-    coaches: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-      },
-    ],
-    scheduleSlots: [
-      {
-        day: { type: String, required: true },
-        time: { type: String, required: true },
-      },
-    ],
   },
   {
     timestamps: true,
     toJSON: {
-      transform: (_doc, ret) => {
-        ret.id = ret._id;
-        delete ret._id;
-        delete ret.__v;
-        return ret;
-      },
-    },
-    toObject: {
       transform: (_doc, ret) => {
         ret.id = ret._id;
         delete ret._id;

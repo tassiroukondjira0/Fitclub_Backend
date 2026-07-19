@@ -123,12 +123,12 @@ const getOverview = async (req, res, next) => {
   }
 };
 
-// @desc    Liste complète des utilisateurs (vue admin)
+// @desc    Liste complète des clients (vue admin)
 // @route   GET /api/dashboard/clients
 // @access  Privé (admin)
 const getClients = async (req, res, next) => {
   try {
-    const clients = await User.find({ role: { $in: ['client', 'coach'] } }).sort('-createdAt');
+    const clients = await User.find({ role: 'client' }).sort('-createdAt');
     res.json({ total: clients.length, clients });
   } catch (error) {
     next(error);
