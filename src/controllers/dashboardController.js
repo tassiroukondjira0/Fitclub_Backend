@@ -1,0 +1,138 @@
+const User = require('../models/User');
+const Booking = require('../models/Booking');
+const AnalyticsEvent = require('../models/AnalyticsEvent');
+
+const MONTH_LABELS = ['Jan', 'Fev', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// Regroupe des documents par mois (Jan..Dec) pour une année donnée, à partir de leur createdAt.
+const countByMonthForYear = async (Model, year, filter = {}) => {
+  const start = new Date(`${year}-01-01T00:00:00.000Z`);
+  const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
+
+  const results = await Model.aggregate([
+    { $match: { ...filter, createdAt: { $gte: start, $lt: end } } },
+    { $group: { _id: { $month: '$createdAt' }, count: { $sum: 1 } } },
+  ]);
+
+  const counts = new Array(12).fill(0);
+  results.forEach((r) => {
+    counts[r._id - 1] = r.count; // $month renvoie 1-12
+  });
+  return counts;
+};
+
+const percentChange = (current, previous) => {
+  if (previous === 0) return current > 0 ? '+100%' : '+0%';
+  const change = ((current - previous) / previous) * 100;
+  const sign = change >= 0 ? '+' : '';
+  return `${sign}${change.toFixed(1)}%`;
+};
+
+// @desc    Statistiques du dashboard (basées sur les vraies données de la base)
+// @route   GET /api/dashboard/overview
+// @access  Privé
+const getOverview = async (req, res, next) => {
+  try {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+    const [
+      activeUsers,
+      newUsersThisMonth,
+      newUsersLastMonth,
+      totalBookings,
+      totalViews,
+      thisYearUsers,
+      lastYearUsers,
+      deviceAgg,
+      locationAgg,
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ createdAt: { $gte: startOfThisMonth } }),
+      User.countDocuments({ createdAt: { $gte: startOfLastMonth, $lt: startOfThisMonth } }),
+      Booking.countDocuments(),
+      AnalyticsEvent.countDocuments(),
+      countByMonthForYear(User, currentYear),
+      countByMonthForYear(User, currentYear - 1),
+      AnalyticsEvent.aggregate([{ $group: { _id: '$device', count: { $sum: 1 } } }]),
+      User.aggregate([
+        { $match: { country: { $nin: [null, ''] } } },
+        { $group: { _id: '$country', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 4 },
+      ]),
+    ]);
+
+    const deviceLabels = ['iOS', 'Android', 'Windows', 'Mac', 'Linux', 'Other'];
+    const deviceValues = deviceLabels.map(
+      (label) => deviceAgg.find((d) => d._id === label)?.count ?? 0
+    );
+
+    const locationLabels = locationAgg.map((l) => l._id);
+    const locationValues = locationAgg.map((l) => l.count);
+
+    res.json({
+      stats: [
+        {
+          id: 'views',
+          title: 'Views',
+          value: totalViews,
+          change: '+0%',
+          trend: 'up',
+        },
+        {
+          id: 'visits',
+          title: 'Visits',
+          value: totalBookings,
+          change: '+0%',
+          trend: 'up',
+        },
+        {
+          id: 'newUsers',
+          title: 'New Users',
+          value: newUsersThisMonth,
+          change: percentChange(newUsersThisMonth, newUsersLastMonth),
+          trend: newUsersThisMonth >= newUsersLastMonth ? 'up' : 'down',
+        },
+        {
+          id: 'activeUsers',
+          title: 'Active Users',
+          value: activeUsers,
+          change: '+0%',
+          trend: 'up',
+        },
+      ],
+      totalUsers: {
+        labels: MONTH_LABELS,
+        thisYear: thisYearUsers,
+        lastYear: lastYearUsers,
+      },
+      trafficByDevice: {
+        labels: deviceLabels,
+        values: deviceValues,
+      },
+      trafficByLocation: {
+        labels: locationLabels.length ? locationLabels : ['Aucune donnée'],
+        values: locationValues.length ? locationValues : [0],
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Liste complète des utilisateurs (vue admin)
+// @route   GET /api/dashboard/clients
+// @access  Privé (admin)
+const getClients = async (req, res, next) => {
+  try {
+    const clients = await User.find({ role: { $in: ['client', 'coach'] } }).sort('-createdAt');
+    res.json({ total: clients.length, clients });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getOverview, getClients };
