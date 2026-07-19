@@ -19,14 +19,14 @@ const courseSchema = new mongoose.Schema(
       required: true,
       default: 45,
     },
-    // Référence vers un vrai compte utilisateur (role: "coach"), et non plus
-    // une simple chaîne de texte. Le champ `instructor` (attendu par le
-    // frontend comme une chaîne) est reconstruit dynamiquement à partir de ce
-    // compte dans courseController.js, pour ne rien casser côté frontend.
-    coachId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
+    // Un cours peut avoir PLUSIEURS coachs (entre 4 et 5, gérés depuis le
+    // dashboard admin "Coaches par cours"). Chaque entrée référence un vrai
+    // compte utilisateur. Le champ `instructor` (attendu par le frontend
+    // comme une simple chaîne) est reconstruit dynamiquement à partir des
+    // noms de ces comptes dans courseController.js.
+    coaches: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+      default: [],
     },
     schedule: {
       day: { type: String, required: true },

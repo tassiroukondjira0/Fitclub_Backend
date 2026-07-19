@@ -113,7 +113,7 @@ const run = async () => {
   for (const { coachEmail, ...course } of courses) {
     await Course.findByIdAndUpdate(
       course._id,
-      { ...course, coachId: coachIdByEmail[coachEmail] },
+      { ...course, coaches: [coachIdByEmail[coachEmail]] },
       { upsert: true, new: true }
     );
     console.log(`✔ Cours seedé : ${course.title} (${course._id})`);

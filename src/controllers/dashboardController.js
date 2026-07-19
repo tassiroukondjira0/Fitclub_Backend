@@ -123,12 +123,16 @@ const getOverview = async (req, res, next) => {
   }
 };
 
-// @desc    Liste complète des clients (vue admin)
+// @desc    Liste complète des clients et coachs (vue admin)
 // @route   GET /api/dashboard/clients
 // @access  Privé (admin)
+//
+// Inclut les comptes "client" ET "coach" (mais pas "admin") : le dashboard
+// admin utilise cette même liste pour rechercher un coach existant à
+// assigner à un cours (voir CoachSelector côté frontend).
 const getClients = async (req, res, next) => {
   try {
-    const clients = await User.find({ role: 'client' }).sort('-createdAt');
+    const clients = await User.find({ role: { $ne: 'admin' } }).sort('-createdAt');
     res.json({ total: clients.length, clients });
   } catch (error) {
     next(error);

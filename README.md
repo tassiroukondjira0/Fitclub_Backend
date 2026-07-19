@@ -220,10 +220,30 @@ renvoie `role: "coach"` dans la réponse.
 }
 ```
 
-Chaque cours (`Course`) est désormais lié à un vrai compte coach via `coachId` (au lieu d'une
-simple chaîne `instructor`). Le champ `instructor` renvoyé au frontend est reconstruit
-dynamiquement à partir du nom du coach lié, donc la forme de réponse `GET /api/courses` ne change
-pas côté frontend.
+Chaque cours (`Course`) peut désormais avoir **plusieurs coachs** (entre 4 et 5, gérés depuis le
+dashboard admin "Coaches par cours") via un tableau `coaches` (au lieu d'un seul coach). Le champ
+`instructor` renvoyé au frontend reste une chaîne (les noms des coachs joints par une virgule),
+donc la forme générale de `GET /api/courses` ne change pas côté frontend.
+
+**Gestion des coachs d'un cours :**
+
+| Méthode | Route | Accès | Description |
+|---|---|---|---|
+| GET | `/api/courses/:courseId/coaches` | 🔒 admin | Liste des coachs assignés à ce cours |
+| POST | `/api/courses/:courseId/coaches` | 🔒 admin | Assigner un utilisateur comme coach (body : `{ userId }`) |
+| DELETE | `/api/courses/:courseId/coaches/:coachId` | 🔒 admin | Retirer un coach du cours |
+
+Maximum 5 coachs par cours (au-delà, l'API renvoie une erreur 400). Assigner un utilisateur ayant
+le rôle `client` comme coach d'un cours **change automatiquement son rôle en `coach`** — il peut
+ensuite se connecter et accéder à son espace coach (`GET /api/courses/mine`). Le retirer d'un
+cours ne rétrograde pas son rôle automatiquement (il peut coacher d'autres cours).
+
+`GET /api/dashboard/clients` renvoie maintenant les comptes `client` **et** `coach` (mais pas
+`admin`), pour permettre au dashboard de rechercher un coach existant à assigner à un cours.
+
+⚠️ **Si vous aviez déjà seedé votre base avant cette mise à jour** : les cours existants ont
+encore l'ancien champ `coachId` (single) et pas de `coaches` (tableau). Relancez `npm run seed`
+une fois ce backend redéployé pour migrer les 6 cours vers le nouveau format.
 
 Un coach peut consulter ses propres cours via `GET /api/courses/mine`, et voir les clients
 inscrits à l'un de ses cours via `GET /api/bookings/course/:courseId` (documenté dans la section
