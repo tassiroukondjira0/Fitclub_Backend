@@ -1,3 +1,18 @@
+// Ce script insère les 6 cours affichés sur la page "Cours" du frontend,
+// ainsi qu'un vrai compte coach par cours (role: "coach") auquel chaque
+// cours est désormais lié via coachId (et non plus une simple chaîne de texte).
+//
+// Les identifiants de cours (_id) sont volontairement fixes : "course_1" à
+// "course_6", car src/lib/courses.ts, dans le frontend, fait déjà
+// correspondre chaque slug de cours ("base-endurance", "base-hiit", ...) à
+// ces IDs précis.
+//
+// Mot de passe de test pour tous les comptes coach créés : Coach123!
+// (à communiquer aux coachs pour leur première connexion, ou à faire
+// changer via PATCH /api/coaches/:id une fois connecté)
+//
+// Utilisation : npm run seed  (nécessite MONGO_URI dans .env)
+
 require('dotenv').config();
 const mongoose = require('mongoose');
 const connectDB = require('../config/db');

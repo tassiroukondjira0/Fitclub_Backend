@@ -28,6 +28,53 @@ const percentChange = (current, previous) => {
   return `${sign}${change.toFixed(1)}%`;
 };
 
+// Le champ "country" est saisi en texte libre à l'inscription : deux
+// utilisateurs au Sénégal peuvent avoir tapé "Sénégal", "senegal" ou
+// "SENEGAL ". Une agrégation MongoDB classique ($group sur la valeur brute)
+// créerait alors une barre séparée pour chaque variante. On normalise donc
+// (accents, casse, espaces) avant de regrouper, tout en gardant comme
+// libellé d'affichage l'orthographe la plus utilisée par les utilisateurs.
+const normalizeCountryKey = (raw) =>
+  raw
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // supprime les accents (é -> e, etc.)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ') // ignore ponctuation/apostrophes/tirets
+    .trim();
+
+const getLocationBreakdown = async () => {
+  const users = await User.find({ country: { $nin: [null, ''] } }, 'country').lean();
+
+  const groups = new Map(); // clé normalisée -> { count, labelCounts }
+  users.forEach(({ country }) => {
+    const raw = (country || '').trim();
+    if (!raw) return;
+
+    const key = normalizeCountryKey(raw);
+    if (!groups.has(key)) {
+      groups.set(key, { count: 0, labelCounts: new Map() });
+    }
+    const group = groups.get(key);
+    group.count += 1;
+    group.labelCounts.set(raw, (group.labelCounts.get(raw) || 0) + 1);
+  });
+
+  const entries = Array.from(groups.values()).map((group) => {
+    let bestLabel = '';
+    let bestLabelCount = -1;
+    group.labelCounts.forEach((count, label) => {
+      if (count > bestLabelCount) {
+        bestLabelCount = count;
+        bestLabel = label;
+      }
+    });
+    return { label: bestLabel, count: group.count };
+  });
+
+  entries.sort((a, b) => b.count - a.count);
+  return entries.slice(0, 4);
+};
+
 // @desc    Statistiques du dashboard (basées sur les vraies données de la base)
 // @route   GET /api/dashboard/overview
 // @access  Privé
@@ -47,7 +94,7 @@ const getOverview = async (req, res, next) => {
       thisYearUsers,
       lastYearUsers,
       deviceAgg,
-      locationAgg,
+      locationEntries,
     ] = await Promise.all([
       User.countDocuments(),
       User.countDocuments({ createdAt: { $gte: startOfThisMonth } }),
@@ -57,12 +104,7 @@ const getOverview = async (req, res, next) => {
       countByMonthForYear(User, currentYear),
       countByMonthForYear(User, currentYear - 1),
       AnalyticsEvent.aggregate([{ $group: { _id: '$device', count: { $sum: 1 } } }]),
-      User.aggregate([
-        { $match: { country: { $nin: [null, ''] } } },
-        { $group: { _id: '$country', count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $limit: 4 },
-      ]),
+      getLocationBreakdown(),
     ]);
 
     const deviceLabels = ['iOS', 'Android', 'Windows', 'Mac', 'Linux', 'Other'];
@@ -70,8 +112,8 @@ const getOverview = async (req, res, next) => {
       (label) => deviceAgg.find((d) => d._id === label)?.count ?? 0
     );
 
-    const locationLabels = locationAgg.map((l) => l._id);
-    const locationValues = locationAgg.map((l) => l.count);
+    const locationLabels = locationEntries.map((l) => l.label);
+    const locationValues = locationEntries.map((l) => l.count);
 
     res.json({
       stats: [
